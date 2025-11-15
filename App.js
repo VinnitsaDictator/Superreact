@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    SafeAreaView
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
+  TextInput,
+  ScrollView
 } from 'react-native';
+import { useForm, Controller } from 'react-hook-form';
 
 export default function App() {
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
   const getTodos = async () => {
     try {
@@ -52,7 +56,11 @@ export default function App() {
         </View>
 
         {/* Title */}
-        <Text style={styles.cardTitle} numberOfLines={1}>{item.todo}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.todo}</Text>
+          {item.priority && <Text style={styles.priorityText}>Priority: {item.priority}</Text>}
+          {item.date && <Text style={styles.dateText}>{item.date}</Text>}
+        </View>
 
         {/* Time */}
         <Text style={styles.cardTime}>{index + 12} pm</Text>
@@ -71,6 +79,16 @@ export default function App() {
           <View style={styles.contentArea}>
             <Text style={styles.title}>ODOT List</Text>
             <Text style={styles.date}>4th March 2018</Text>
+
+            {/* Form toggle */}
+            <TouchableOpacity onPress={() => setShowForm(v => !v)} style={styles.formToggle}>
+              <Text style={styles.formToggleText}>{showForm ? 'Close' : 'Add New Task'}</Text>
+            </TouchableOpacity>
+
+            {showForm && <NewTaskForm onAdd={task => {
+              setTodos(prev => [task, ...prev]);
+              setShowForm(false);
+            }} />}
 
             <FlatList 
               data={todos}
@@ -105,6 +123,88 @@ export default function App() {
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+function NewTaskForm({ onAdd }) {
+  const { control, handleSubmit, reset } = useForm({
+    defaultValues: {
+      name: '',
+      date: '',
+      priority: 'low'
+    }
+  });
+
+  const onSubmit = data => {
+    const newTask = {
+      id: Date.now(),
+      todo: data.name,
+      completed: false, // default to 'to-do'
+      priority: data.priority,
+      date: data.date
+    };
+    onAdd(newTask);
+    reset();
+  };
+
+  return (
+    <View style={styles.formContainer}>
+      <ScrollView keyboardShouldPersistTaps="handled">
+        <Text style={styles.inputLabel}>Name</Text>
+        <Controller
+          control={control}
+          name="name"
+          rules={{ required: true }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.input}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              placeholder="Task name"
+            />
+          )}
+        />
+
+        <Text style={styles.inputLabel}>Date</Text>
+        <Controller
+          control={control}
+          name="date"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.input}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              placeholder="YYYY-MM-DD or any text"
+            />
+          )}
+        />
+
+        <Text style={styles.inputLabel}>Priority</Text>
+        <Controller
+          control={control}
+          name="priority"
+          render={({ field: { onChange, value } }) => (
+            <View style={styles.priorityRow}>
+              {['low', 'medium', 'high'].map(p => (
+                <TouchableOpacity
+                  key={p}
+                  style={[styles.priorityButton, value === p && styles.prioritySelected]}
+                  onPress={() => onChange(p)}
+                >
+                  <Text style={[styles.priorityButtonText, value === p && styles.prioritySelectedText]}>{p}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        />
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit(onSubmit)}>
+          <Text style={styles.submitButtonText}>Add Task</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -257,4 +357,83 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#3B5998',
   },
+  formToggle: {
+    backgroundColor: '#eef6ff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignSelf: 'center',
+    marginBottom: 10,
+  },
+  formToggleText: {
+    color: '#0077cc',
+    fontWeight: '600',
+  },
+  formContainer: {
+    backgroundColor: '#f7f9fc',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#fff'
+  },
+  priorityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  priorityButton: {
+    flex: 1,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    alignItems: 'center',
+    backgroundColor: '#fff'
+  },
+  prioritySelected: {
+    backgroundColor: '#4da6ff',
+    borderColor: '#4da6ff'
+  },
+  priorityButtonText: {
+    color: '#333',
+    textTransform: 'capitalize'
+  },
+  prioritySelectedText: {
+    color: '#fff'
+  },
+  submitButton: {
+    marginTop: 12,
+    backgroundColor: '#4da6ff',
+    paddingVertical: 10,
+    borderRadius: 6,
+    alignItems: 'center'
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontWeight: '600'
+  },
+  priorityText: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: 4
+  },
+  dateText: {
+    color: '#999',
+    fontSize: 12,
+    marginTop: 2
+  }
 });
